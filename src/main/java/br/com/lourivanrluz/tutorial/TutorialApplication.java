@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
 import org.springframework.kafka.config.TopicBuilder;
 
-@EnableJdbcAuditing
 @SpringBootApplication
+@EnableJdbcAuditing
 public class TutorialApplication {
 
 	public static void main(String[] args) {

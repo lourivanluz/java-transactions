@@ -1,4 +1,4 @@
-package br.com.lourivanrluz.tutorial.Authorization;
+package br.com.lourivanrluz.tutorial.authorization;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,11 +19,12 @@ public class AuthorizerService {
 
     public void authorize(Transaction transaction) {
         LOGGER.info("AUTHORIZING TRANSACTION {}", transaction);
-        var response = restClient.get().retrieve().toEntity(Authorization.class);
+        // var response = restClient.get().retrieve().toEntity(Authorization.class);
 
-        if (response.getStatusCode().isError() || !response.getBody().isAuthorized()) {
-            throw new unauthorizedException("Unauthorized transaction");
-        }
+        // if (response.getStatusCode().isError() || !response.getBody().isAuthorized())
+        // {
+        // throw new unauthorizedException("Unauthorized transaction");
+        // }
         LOGGER.info("TRANSACTION AUTHORIZED {}", transaction);
     }
 

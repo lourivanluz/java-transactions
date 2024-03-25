@@ -18,13 +18,13 @@ public class NotificationConsumer {
     }
 
     @KafkaListener(topics = "Transaction-notification", groupId = "tutorial-desafio")
-    public void resiveNotification(Transaction transaction) {
-        LOGGER.info("Notifying transaction {}...", transaction);
-        var response = restClient.get().retrieve().toEntity(Notification.class);
-        if (response.getStatusCode().isError() || !response.getBody().message()) {
-            throw new NotificationException("Error seding notification");
-        }
-        LOGGER.info("nofication has been sent {}", response.getBody());
+    public void resiveNotification(String mensagem) {
+        LOGGER.info("Notifying transaction {}...", mensagem);
+        // var response = restClient.get().retrieve().toEntity(Notification.class);
+        // if (response.getStatusCode().isError() || !response.getBody().message()) {
+        // throw new NotificationException("Error seding notification");
+        // }
+        LOGGER.info("nofication has been sent {}", "OK");
 
     }
 }

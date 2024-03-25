@@ -1,4 +1,4 @@
-package br.com.lourivanrluz.tutorial.Authorization;
+package br.com.lourivanrluz.tutorial.authorization;
 
 public record Authorization(
         String message) {

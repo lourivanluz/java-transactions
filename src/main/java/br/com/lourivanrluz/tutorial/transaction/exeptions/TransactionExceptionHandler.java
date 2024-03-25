@@ -1,4 +1,4 @@
-package br.com.lourivanrluz.tutorial.transaction;
+package br.com.lourivanrluz.tutorial.transaction.exeptions;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;

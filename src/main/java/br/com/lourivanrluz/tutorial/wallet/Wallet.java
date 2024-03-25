@@ -12,17 +12,39 @@ public record Wallet(
                 Long cpf,
                 String email,
                 String password,
-                int type,
-                BigDecimal balance
+                Integer type,
+                BigDecimal balance,
+                BigDecimal credit,
+                Boolean blocked
 
 ) {
-
-        public Wallet debet(BigDecimal value) {
-                return new Wallet(id, fullName, cpf, email, password, type, balance.subtract(value));
+        public Wallet {
+                balance = balance.setScale(2);
+                credit = credit.setScale(2);
         }
 
-        public Wallet credit(BigDecimal value) {
-                return new Wallet(id, fullName, cpf, email, password, type, balance.add(value));
+        public Wallet subBalance(BigDecimal value) {
+                return new Wallet(id, fullName, cpf, email, password, type, balance.subtract(value), credit, blocked);
+        }
+
+        public Wallet addBalance(BigDecimal value) {
+                return new Wallet(id, fullName, cpf, email, password, type, balance.add(value), credit, blocked);
+        }
+
+        public Wallet subCredit(BigDecimal value) {
+                return new Wallet(id, fullName, cpf, email, password, type, balance, credit.subtract(value), blocked);
+        }
+
+        public Wallet addCredit(BigDecimal value) {
+                return new Wallet(id, fullName, cpf, email, password, type, balance, credit.add(value), blocked);
+        }
+
+        public Wallet blockWallet() {
+                return new Wallet(id, fullName, cpf, email, password, type, balance, credit, true);
+        }
+
+        public Wallet unBlockWallet() {
+                return new Wallet(id, fullName, cpf, email, password, type, balance, credit, false);
         }
 
 }

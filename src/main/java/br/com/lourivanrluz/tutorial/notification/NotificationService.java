@@ -12,7 +12,7 @@ public class NotificationService {
         this.notificationProducer = notificationProducer;
     }
 
-    public void notify(Transaction transaction) {
-        notificationProducer.sendNotification(transaction);
+    public void notify(String mensagem) {
+        notificationProducer.sendNotification(mensagem);
     }
 }

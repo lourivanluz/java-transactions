@@ -7,13 +7,13 @@ import br.com.lourivanrluz.tutorial.transaction.Transaction;
 
 @Service
 public class NotificationProducer {
-    private final KafkaTemplate<String, Transaction> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public NotificationProducer(KafkaTemplate<String, Transaction> kafkaTemplate) {
+    public NotificationProducer(KafkaTemplate<String, String> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendNotification(Transaction transaction) {
-        kafkaTemplate.send("Transaction-notification", transaction);
+    public void sendNotification(String mensagem) {
+        kafkaTemplate.send("Transaction-notification", mensagem);
     }
 }

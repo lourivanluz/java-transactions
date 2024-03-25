@@ -1,12 +1,16 @@
 package br.com.lourivanrluz.tutorial.transaction;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import br.com.lourivanrluz.tutorial.Authorization.AuthorizerService;
+import br.com.lourivanrluz.tutorial.authorization.AuthorizerService;
 import br.com.lourivanrluz.tutorial.notification.NotificationService;
+import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExeption;
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
 import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import br.com.lourivanrluz.tutorial.wallet.WalletType;
@@ -14,50 +18,60 @@ import br.com.lourivanrluz.tutorial.wallet.WalletType;
 @Service
 public class TransactionService {
     private final TransactionsRepository transactionsRepository;
+    private final TransactionsFutureRepository transactionsFutureRepository;
     private final WalletRepository walletRepository;
     private final AuthorizerService authorizerService;
     private final NotificationService notificationService;
 
+    private final Logger LOGGER = LoggerFactory.getLogger(TransactionService.class);
+
     public TransactionService(
             TransactionsRepository transactionsRepository,
+            TransactionsFutureRepository transactionsFutureRepository,
             WalletRepository walletRepository,
             AuthorizerService authorizerService,
             NotificationService notificationService) {
         this.transactionsRepository = transactionsRepository;
+        this.transactionsFutureRepository = transactionsFutureRepository;
         this.walletRepository = walletRepository;
         this.authorizerService = authorizerService;
         this.notificationService = notificationService;
+
     }
 
     @Transactional
     public Transaction createTransaction(Transaction transaction) {
-
-        // 1 validar
+        LOGGER.info("-TRANSACTION-{}", transaction);
+        // validar
         validate(transaction);
-        // 2 criar a trasacao
-        var newTransaction = transactionsRepository.save(transaction);
-        // 3 debitar da carteira
-        var walletPayer = walletRepository.findById(transaction.payer()).get();
-        walletRepository.save(walletPayer.debet(transaction.value()));
-        // 4 creditar na carteira
-        var walletPayee = walletRepository.findById(transaction.payee()).get();
-        walletRepository.save(walletPayee.credit(transaction.value()));
+        // salvar a transaction no repo
+        Transaction newTransaction = transactionsRepository.save((Transaction) transaction);
+        LOGGER.info("-TRANSACTION-POS-SAVE {}", transaction);
+        // debitar e creditar nas wallwts
+        Wallet walletPayer = walletRepository.findById(transaction.getPayer()).get();
+        Wallet saved = walletRepository.save(walletPayer.subBalance(transaction.getAmount()));
+        Wallet walletPayee = walletRepository.findById(transaction.getPayee()).get();
+        walletRepository.save(walletPayee.addBalance(transaction.getAmount()));
 
-        // 5 autorizar
-        authorizerService.authorize(transaction);
-        // 6 notificar
-        notificationService.notify(transaction);
+        if (transaction instanceof TransactionFuture) {
+            LOGGER.info("-TRANSACTIONFUTURE-", transaction.toString());
+            BigDecimal totalAmount = transaction.getAmount()
+                    .multiply(BigDecimal.valueOf(transaction.getInstallments()));
+            walletRepository.save(saved.subCredit(totalAmount));
+
+            // salva na transaction future
+            transactionsFutureRepository.save((TransactionFuture) transaction);
+            LOGGER.info("-TRANSACTIONFUTURE-POS-SAVE-{}", transaction);
+        }
+        authorizerService.authorize(newTransaction);
+        notificationService.notify(newTransaction.toString());
 
         return newTransaction;
     }
-    // se o pagador é do tipo comum
-    // se o pagador temo dinheiro na carteira
-    // se o pagador for diferente do recebedor
 
-    // entender melhor depois
     private void validate(Transaction transaction) {
-        walletRepository.findById(transaction.payee())
-                .map(payee -> walletRepository.findById(transaction.payer())
+        walletRepository.findById(transaction.getPayee())
+                .map(payee -> walletRepository.findById(transaction.getPayer())
                         .map(payer -> isTransactionValided(transaction, payer) ? transaction : null)
                         .orElseThrow(() -> new InvalideTransactionExeption(
                                 "Invalid transaction - %s".formatted(transaction))))
@@ -65,9 +79,35 @@ public class TransactionService {
     }
 
     private boolean isTransactionValided(Transaction transaction, Wallet payer) {
-        return payer.type() == WalletType.COMUM.getValue() &&
-                payer.balance().compareTo(transaction.value()) >= 0 &&
-                !payer.id().equals(transaction.payee());
+        Boolean validedCommum = !payer.blocked() && payer.type() == WalletType.COMUM.getValue() &&
+                payer.balance().compareTo(transaction.getAmount()) >= 0 &&
+                !payer.id().equals(transaction.getPayee());
+
+        if (transaction instanceof TransactionFuture) {
+            TransactionFuture transactionFuture = (TransactionFuture) transaction;
+            Boolean haveCredit = payer.credit().compareTo(transactionFuture.getTotalAmount()) >= 0;
+            return haveCredit && validedCommum;
+        }
+
+        return validedCommum;
+    }
+
+    public Transaction createFullTransaction(Transaction transaction) {
+        return createTransaction(transaction);
+    }
+
+    public Transaction createInstallmentTransaction(Transaction transaction) {
+
+        BigDecimal totalAmount = transaction.getAmount()
+                .multiply(BigDecimal.valueOf(transaction.getInstallments()));
+        TransactionFuture transactionInstallment = new TransactionFuture(null,
+                transaction.getPayer(),
+                transaction.getPayee(),
+                transaction.getAmount(), transaction.getTypeTransaction(),
+                transaction.getInstallments(), null,
+                totalAmount, true);
+        return createTransaction(transactionInstallment);
+
     }
 
     public List<Transaction> list() {
