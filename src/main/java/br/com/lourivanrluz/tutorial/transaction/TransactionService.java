@@ -1,6 +1,7 @@
 package br.com.lourivanrluz.tutorial.transaction;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -44,8 +45,7 @@ public class TransactionService {
         LOGGER.info("-TRANSACTION-{}", transaction);
         // validar
         validate(transaction);
-        // salvar a transaction no repo
-        Transaction newTransaction = transactionsRepository.save((Transaction) transaction);
+
         LOGGER.info("-TRANSACTION-POS-SAVE {}", transaction);
         // debitar e creditar nas wallwts
         Wallet walletPayer = walletRepository.findById(transaction.getPayer()).get();
@@ -59,14 +59,21 @@ public class TransactionService {
                     .multiply(BigDecimal.valueOf(transaction.getInstallments()));
             walletRepository.save(saved.subCredit(totalAmount));
 
-            // salva na transaction future
-            transactionsFutureRepository.save((TransactionFuture) transaction);
             LOGGER.info("-TRANSACTIONFUTURE-POS-SAVE-{}", transaction);
         }
-        authorizerService.authorize(newTransaction);
-        notificationService.notify(newTransaction.toString());
+        authorizerService.authorize(transaction);
+        notificationService.notify(transaction.toString());
 
-        return newTransaction;
+        if (transaction instanceof TransactionFuture) {
+            TransactionFuture transactionfuture = (TransactionFuture) transaction;
+            Transaction result = transactionsRepository.save(transactionfuture.convertToTransaction());
+            transactionfuture.setNextPayment(LocalDateTime.now().plusMinutes(1));
+            transactionfuture.setInstallments(transactionfuture.getInstallments() - 1);
+            transactionsFutureRepository.save(transactionfuture);
+
+            return result;
+        }
+        return transactionsRepository.save(transaction);
     }
 
     private void validate(Transaction transaction) {
@@ -100,13 +107,10 @@ public class TransactionService {
 
         BigDecimal totalAmount = transaction.getAmount()
                 .multiply(BigDecimal.valueOf(transaction.getInstallments()));
-        TransactionFuture transactionInstallment = new TransactionFuture(null,
-                transaction.getPayer(),
-                transaction.getPayee(),
-                transaction.getAmount(), transaction.getTypeTransaction(),
-                transaction.getInstallments(), null,
-                totalAmount, true);
-        return createTransaction(transactionInstallment);
+        TransactionFuture newtransaction = transaction.convertToTransactionFuture();
+        newtransaction.setTotalAmount(totalAmount);
+        newtransaction.setIsActive(true);
+        return createTransaction(newtransaction);
 
     }
 
