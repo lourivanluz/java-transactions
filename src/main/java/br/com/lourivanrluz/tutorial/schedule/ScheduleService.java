@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -32,10 +33,9 @@ public class ScheduleService {
         this.transactionsFutureRepository = transactionsFutureRepository;
         this.transactionsRepository = transactionsRepository;
         this.walletRepository = walletRepository;
-
     }
 
-    @Scheduled(fixedRate = 120000) // 5mim = 300000
+    @Scheduled(fixedRateString = "${SEARCH_INTERVAL_FOR_FUTURE_TRANSACTIONS_IN_MS}") // 5mim = 300000
     public void scheduleTransactionService() {
         List<TransactionFuture> transactionFutureList = transactionsFutureRepository
                 .findActiveTransactionFutures(LocalDateTime.now());
@@ -47,17 +47,6 @@ public class ScheduleService {
         for (TransactionFuture transactionFuture : transactionFutureList) {
             scheduleTransaction(transactionFuture);
         }
-
-        // buscar no banco de transacoes futuras as que estao com ativo igual verdadeiro
-        // e vencida
-        // para cada uma dessas transaçoes futura fazer:
-        // validar transaçao verificando se tem o valor na conta...x
-        // se nao tiver bloquear a conta e encerrar o processox
-        // se tiver saldo criar uma transacaonormal com o preço da parcela
-        // diminuir o numero da parcela
-        // se zerar o numero da parcela, devolver o credito todal para a wallet,
-        // colocar como false o campo isactive nessa transacao futura.
-
     }
 
     @Transactional
@@ -67,7 +56,7 @@ public class ScheduleService {
         Wallet payee = walletRepository.findById(transactionFuture.getPayee()).get();
         Wallet savedPayer = walletRepository.save(payer.subBalance(transactionFuture.getAmount()));
         walletRepository.save(payee.addBalance(transactionFuture.getAmount()));
-        Transaction savedTransaction = transactionsRepository.save(transactionFuture.convertToTransaction());
+        Transaction savedTransaction = transactionFuture.convertToTransaction();
         Integer newInstallment = transactionFuture.getInstallments() - 1;
 
         if (newInstallment == 0) {
@@ -78,6 +67,7 @@ public class ScheduleService {
         }
         transactionFuture.setInstallments(newInstallment);
         transactionsFutureRepository.save(transactionFuture);
+        transactionsRepository.save(savedTransaction);
 
         LOGGER.info("****REALIZOU PAGAMENTO FUTURO**** {}", savedTransaction);
 

@@ -12,11 +12,13 @@ public interface TransactionsFutureRepository extends ListCrudRepository<Transac
     // "WHERE is_active = true " +
     // "AND TIMESTAMPDIFF(MINUTE, next_payment, :currentDateTime) <= 1")
 
-    @Query("SELECT * " +
-            "FROM TRANSACTIONS_FUTURE AS tf " +
-            "INNER JOIN WALLETS AS w ON tf.PAYER = w.ID " +
-            "WHERE tf.IS_ACTIVE = true " +
-            "AND w.BLOCKED = false " +
-            "AND TIMESTAMPDIFF(MINUTE, tf.NEXT_PAYMENT, :currentDateTime) <= 1")
+    @Query("""
+            SELECT tf.*
+            FROM transactions_future AS tf
+            INNER JOIN wallets AS w ON tf.payer = w.id
+            WHERE tf.is_active = true
+            AND w."blocked" = false
+            AND EXTRACT(EPOCH FROM (:currentDateTime - tf.next_payment)) >=0;
+                """)
     List<TransactionFuture> findActiveTransactionFutures(LocalDateTime currentDateTime);
 }

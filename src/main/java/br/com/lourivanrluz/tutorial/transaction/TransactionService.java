@@ -6,6 +6,9 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +20,16 @@ import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import br.com.lourivanrluz.tutorial.wallet.WalletType;
 
 @Service
+@PropertySource("classpath:application.properties")
 public class TransactionService {
     private final TransactionsRepository transactionsRepository;
     private final TransactionsFutureRepository transactionsFutureRepository;
     private final WalletRepository walletRepository;
     private final AuthorizerService authorizerService;
     private final NotificationService notificationService;
+
+    @Autowired
+    private Environment env;
 
     private final Logger LOGGER = LoggerFactory.getLogger(TransactionService.class);
 
@@ -67,7 +74,7 @@ public class TransactionService {
         if (transaction instanceof TransactionFuture) {
             TransactionFuture transactionfuture = (TransactionFuture) transaction;
             Transaction result = transactionsRepository.save(transactionfuture.convertToTransaction());
-            transactionfuture.setNextPayment(LocalDateTime.now().plusMinutes(1));
+            transactionfuture.setNextPayment(getPaymentDeadLineProp(env));
             transactionfuture.setInstallments(transactionfuture.getInstallments() - 1);
             transactionsFutureRepository.save(transactionfuture);
 
@@ -112,6 +119,15 @@ public class TransactionService {
         newtransaction.setIsActive(true);
         return createTransaction(newtransaction);
 
+    }
+
+    private static LocalDateTime getPaymentDeadLineProp(Environment env) {
+        Integer month = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_MONTHS"));
+        Integer days = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_DAYS"));
+        Integer hours = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_HOURS"));
+        Integer minutes = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_MINUTES"));
+
+        return LocalDateTime.now().plusMonths(month).plusDays(days).plusHours(hours).plusMinutes(minutes);
     }
 
     public List<Transaction> list() {

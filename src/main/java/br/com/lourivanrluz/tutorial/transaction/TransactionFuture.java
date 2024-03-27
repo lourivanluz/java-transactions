@@ -11,7 +11,7 @@ import lombok.Data;
 // @EqualsAndHashCode(callSuper = false)
 
 @Data
-@Table("TRANSACTIONS_FUTURE")
+@Table("transactions_future")
 public class TransactionFuture extends Transaction {
 
     @NotNull
