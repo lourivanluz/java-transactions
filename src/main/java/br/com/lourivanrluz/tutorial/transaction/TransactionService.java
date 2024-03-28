@@ -2,6 +2,7 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.lourivanrluz.tutorial.authorization.AuthorizerService;
+import br.com.lourivanrluz.tutorial.mailSend.Email;
 import br.com.lourivanrluz.tutorial.notification.NotificationService;
 import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExeption;
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
@@ -69,7 +71,23 @@ public class TransactionService {
             LOGGER.info("-TRANSACTIONFUTURE-POS-SAVE-{}", transaction);
         }
         authorizerService.authorize(transaction);
-        notificationService.notify(transaction.toString());
+
+        if (env.getProperty("SEND_EMAIL").equals("true")) {
+            LOGGER.info("-TRANSACTION-ENVIARA-EMAIL}");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String message = """
+                    Mr. %s,
+                    your purchase made on the
+                    %s for the amount of $%.2f cash
+                    has been successfully approved.
+                    """.formatted(walletPayer.fullName(), LocalDateTime.now().format(formatter).toString(),
+                    transaction.getAmount());
+
+            Email mensagem = new Email(walletPayer.email(), "transaction accept", message);
+            notificationService.notify(mensagem.toString());
+        } else {
+            notificationService.notify(transaction.toString());
+        }
 
         if (transaction instanceof TransactionFuture) {
             TransactionFuture transactionfuture = (TransactionFuture) transaction;

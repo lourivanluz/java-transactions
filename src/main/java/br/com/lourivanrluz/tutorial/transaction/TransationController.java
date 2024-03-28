@@ -32,12 +32,24 @@ public class TransationController {
     public Transaction transaction(@RequestBody @Valid Transaction transaction) {
         if (transaction.getTypeTransaction() == TransactionType.PaymentinFull.getValue()
                 && transaction.getInstallments() == 0) {
-            LOGGER.info("PAGAMENTO A VISTA {}", transaction);
-            return transactionService.createFullTransaction(transaction);
+            try {
+                LOGGER.info("PAGAMENTO A VISTA {}", transaction);
+                return transactionService.createFullTransaction(transaction);
+
+            } catch (Exception e) {
+                throw new InvalideTransactionExeption(e.getMessage());
+            }
+
         } else if (transaction.getTypeTransaction() == TransactionType.PaymentinInstallments.getValue()
                 && transaction.getInstallments() >= 2) {
-            LOGGER.info("PAGAMENTO PARCELADO {}", transaction);
-            return transactionService.createInstallmentTransaction(transaction);
+            try {
+                LOGGER.info("PAGAMENTO PARCELADO {}", transaction);
+                return transactionService.createInstallmentTransaction(transaction);
+
+            } catch (Exception e) {
+                throw new InvalideTransactionExeption(e.getMessage());
+            }
+
         } else {
             throw new InvalideTransactionExeption("Invalid fields for transaction");
         }
