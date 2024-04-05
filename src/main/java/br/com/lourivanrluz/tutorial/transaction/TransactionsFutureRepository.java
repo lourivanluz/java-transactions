@@ -2,23 +2,42 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
-import org.springframework.data.jdbc.repository.query.Query;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import br.com.lourivanrluz.tutorial.transaction.Transaction;
 
-public interface TransactionsFutureRepository extends ListCrudRepository<TransactionFuture, Long> {
+@Repository
+public interface TransactionsFutureRepository extends ListCrudRepository<TransactionFuture, UUID> {
 
-    // @Query("SELECT * FROM TRANSACTIONS_FUTURE" +
-    // "WHERE is_active = true " +
-    // "AND TIMESTAMPDIFF(MINUTE, next_payment, :currentDateTime) <= 1")
+    // """
+    // SELECT tf
+    // FROM TransactionFuture tf
+    // JOIN tf.transactions t
+    // JOIN t.wallet w
+    // WHERE tf.isActive = true
+    // AND w.isBlocked = false
+    // AND FUNCTION('EXTRACT', EPOCH FROM :currentDateTime - tf.nextPayment) >= 0
+    // """
+
+    // """"
+    // SELECT tf
+    // FROM transactions_future AS tf
+    // WHERE tf.is_active = true
+    // AND transactions .is_blocked = false
+    // AND tf.next_payment < :currentDateTime
+    // """"
 
     @Query("""
-            SELECT tf.*
-            FROM transactions_future AS tf
-            INNER JOIN wallets AS w ON tf.payer = w.id
-            WHERE tf.is_active = true
-            AND w."blocked" = false
-            AND EXTRACT(EPOCH FROM (:currentDateTime - tf.next_payment)) >=0;
-                """)
-    List<TransactionFuture> findActiveTransactionFutures(LocalDateTime currentDateTime);
+            SELECT tf
+            FROM TransactionFuture tf
+            JOIN tf.transactions t
+            WHERE tf.isActive = true
+            AND t.payer.isBlocked = false
+            AND tf.nextPayment < :currentDateTime
+                        """)
+    List<TransactionFuture> findActiveTransactionFutures(@Param("currentDateTime") LocalDateTime currentDateTime);
 }

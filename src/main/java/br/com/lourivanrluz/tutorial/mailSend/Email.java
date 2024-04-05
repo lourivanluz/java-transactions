@@ -1,5 +1,13 @@
 package br.com.lourivanrluz.tutorial.mailSend;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import br.com.lourivanrluz.tutorial.transaction.Transaction;
+import br.com.lourivanrluz.tutorial.transaction.TransactionDto;
+import br.com.lourivanrluz.tutorial.wallet.Wallet;
+
 public class Email {
     private String to;
     private String subject;
@@ -23,6 +31,27 @@ public class Email {
         } else {
             throw new IllegalArgumentException("Invalid email string format: " + emailAsString);
         }
+    }
+
+    public Email(Transaction transaction) {
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        String name = transaction.getPayer().getUser().getFullName();
+        String email = transaction.getPayer().getUser().getEmail();
+        BigDecimal value = transaction.getAmount();
+        String data = LocalDateTime.now().format(formatter).toString();
+
+        String message = """
+                Mr. %s,
+                your purchase made on the
+                %s for the amount of $%.2f cash
+                has been successfully approved.
+                """.formatted(name, data,
+                value);
+        this.to = email;
+        this.subject = "Transaction accept";
+        this.body = message;
     }
 
     @Override

@@ -5,7 +5,9 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -13,26 +15,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.lourivanrluz.tutorial.transaction.Transaction;
 import br.com.lourivanrluz.tutorial.transaction.TransactionFuture;
+import br.com.lourivanrluz.tutorial.transaction.TransactionService;
 import br.com.lourivanrluz.tutorial.transaction.TransactionsFutureRepository;
-import br.com.lourivanrluz.tutorial.transaction.TransactionsRepository;
 import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExeption;
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
 import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
-import br.com.lourivanrluz.tutorial.wallet.WalletType;
 
 @Service
 @EnableScheduling
+@PropertySource("classpath:application.properties")
 public class ScheduleService {
     private final WalletRepository walletRepository;
-    private final TransactionsRepository transactionsRepository;
     private final TransactionsFutureRepository transactionsFutureRepository;
+    private final TransactionService transactionservice;
+    @Autowired
+    private Environment env;
     private final Logger LOGGER = LoggerFactory.getLogger(ScheduleService.class);
 
-    public ScheduleService(WalletRepository walletRepository, TransactionsRepository transactionsRepository,
-            TransactionsFutureRepository transactionsFutureRepository) {
+    public ScheduleService(WalletRepository walletRepository,
+            TransactionsFutureRepository transactionsFutureRepository, TransactionService transactionservice) {
         this.transactionsFutureRepository = transactionsFutureRepository;
-        this.transactionsRepository = transactionsRepository;
         this.walletRepository = walletRepository;
+        this.transactionservice = transactionservice;
     }
 
     @Scheduled(fixedRateString = "${SEARCH_INTERVAL_FOR_FUTURE_TRANSACTIONS_IN_MS}") // 5mim = 300000
@@ -40,8 +44,6 @@ public class ScheduleService {
         List<TransactionFuture> transactionFutureList = transactionsFutureRepository
                 .findActiveTransactionFutures(LocalDateTime.now());
 
-        // List<TransactionFuture> transactionFutureList =
-        // transactionsFutureRepository.findAll();
         LOGGER.info("***buscou por todas as transaction vancidas hj {}", transactionFutureList);
 
         for (TransactionFuture transactionFuture : transactionFutureList) {
@@ -50,48 +52,40 @@ public class ScheduleService {
     }
 
     @Transactional
-    public void scheduleTransaction(TransactionFuture transactionFuture) {
-        validate(transactionFuture);
-        Wallet payer = walletRepository.findById(transactionFuture.getPayer()).get();
-        Wallet payee = walletRepository.findById(transactionFuture.getPayee()).get();
-        Wallet savedPayer = walletRepository.save(payer.subBalance(transactionFuture.getAmount()));
-        walletRepository.save(payee.addBalance(transactionFuture.getAmount()));
-        Transaction savedTransaction = transactionFuture.convertToTransaction();
-        Integer newInstallment = transactionFuture.getInstallments() - 1;
+    public Transaction scheduleTransaction(TransactionFuture transactionFuture) {
 
-        if (newInstallment == 0) {
-            transactionFuture.setIsActive(false);
-            walletRepository.save(savedPayer.addCredit(transactionFuture.getTotalAmount()));
-        } else {
-            transactionFuture.setNextPayment(LocalDateTime.now().plusMinutes(2));
+        Transaction transaction = transactionFuture.getTransactions()
+                .get(transactionFuture.getTransactions().size() - 1);
+        transaction.setInstallments(transactionFuture.getNumberOfInstallments());
+
+        Wallet walletPayer = transaction.getPayer();
+
+        try {
+            Transaction transactionSuc = transactionservice.createTransaction(transaction, false);
+            LOGGER.info("****REALIZOU PAGAMENTO FUTURO**** {}", transactionSuc);
+            transactionFuture.setNumberOfInstallments(transactionFuture.getNumberOfInstallments() - 1);
+            if (transactionFuture.getNumberOfInstallments() == 0) {
+                transactionFuture.setIsActive(false);
+
+                // Wallet walletPayer = walletRepository.findById(transaction.getPayer()).get();
+                walletPayer.addCredit(transactionFuture.getTotalAmount());
+                walletRepository.save(walletPayer);
+
+            } else {
+                transactionFuture.setNextPayment(TransactionService.getPaymentDeadLineProp(env));
+            }
+
+            transactionsFutureRepository.save(transactionFuture);
+            return transactionSuc;
+        } catch (InvalideTransactionExeption e) {
+
+            if (walletPayer.getBalance().compareTo(transaction.getAmount()) <= 0) {
+                walletPayer.blockWallet();
+                walletRepository.save(walletPayer);
+                return transaction;
+            }
         }
-        transactionFuture.setInstallments(newInstallment);
-        transactionsFutureRepository.save(transactionFuture);
-        transactionsRepository.save(savedTransaction);
+        return transaction;
 
-        LOGGER.info("****REALIZOU PAGAMENTO FUTURO**** {}", savedTransaction);
-
-    }
-
-    private void validate(TransactionFuture transactionFuture) {
-        walletRepository.findById(transactionFuture.getPayee())
-                .map(payee -> walletRepository.findById(transactionFuture.getPayer())
-                        .map(payer -> isTransactionValided(transactionFuture, payer) ? transactionFuture : null)
-                        .orElseThrow(() -> new InvalideTransactionExeption(
-                                "Invalid transaction - %s".formatted(transactionFuture))))
-                .orElseThrow(
-                        () -> new InvalideTransactionExeption("Invalid transaction - %s".formatted(transactionFuture)));
-    }
-
-    private boolean isTransactionValided(Transaction transaction, Wallet payer) {
-        Boolean isValid = (!payer.blocked() && payer.type() == WalletType.COMUM.getValue() &&
-                !payer.id().equals(transaction.getPayee()) && transaction.getInstallments() > 0);
-
-        if (payer.balance().compareTo(transaction.getAmount()) <= 0) {
-            Wallet blockedWalllet = payer.blockWallet();
-            walletRepository.save(blockedWalllet);
-            return false;
-        }
-        return isValid;
     }
 }

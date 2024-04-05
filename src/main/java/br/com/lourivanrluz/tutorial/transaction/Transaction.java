@@ -2,53 +2,65 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+import org.hibernate.annotations.ManyToAny;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import jakarta.validation.constraints.NotNull;
+import br.com.lourivanrluz.tutorial.wallet.Wallet;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
-@Table("transactions")
+@Table(name = "transactions")
+@Entity
+@EntityListeners(AuditingEntityListener.class)
 public class Transaction {
     @Id
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @NotNull
-    private Long payer;
+    @ManyToOne
+    private Wallet payer;
 
-    @NotNull
-    private Long payee;
+    @ManyToOne
+    private Wallet payee;
 
-    @NotNull
     private BigDecimal amount;
 
-    @NotNull
-    private Integer typeTransaction;
+    private TransactionType typeTransaction;
 
-    @NotNull
     private Integer installments;
 
     @CreatedDate
     LocalDateTime createdAt;
 
-    public Transaction(Long id, Long payer, Long payee, BigDecimal amount, Integer typeTransaction,
-            Integer installments, LocalDateTime createdAt) {
+    @ManyToOne
+    @JoinColumn(name = "transaction_future", referencedColumnName = "id")
+    private TransactionFuture transactionFuture;
 
+    public Transaction(UUID id, Wallet payer, Wallet payee, BigDecimal amount, TransactionType typeTransaction,
+            Integer installments, LocalDateTime createdAt) {
         this.id = id;
         this.payer = payer;
         this.payee = payee;
-        this.amount = amount.setScale(2);
+        this.amount = amount;
         this.typeTransaction = typeTransaction;
         this.installments = installments;
         this.createdAt = createdAt;
     }
-
-    public TransactionFuture convertToTransactionFuture() {
-        return new TransactionFuture(null, getPayer(), getPayee(), getAmount(), getTypeTransaction(), getInstallments(),
-                null, getAmount(), null, null);
-    }
-
 }

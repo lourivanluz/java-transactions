@@ -8,10 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 
 import br.com.lourivanrluz.tutorial.transaction.Transaction;
+import br.com.lourivanrluz.tutorial.transaction.TransactionDto;
 
 @Service
 public class AuthorizerService {
@@ -25,7 +25,7 @@ public class AuthorizerService {
     }
 
     public void authorize(Transaction transaction) {
-        LOGGER.info("AUTHORIZING TRANSACTION {}", transaction);
+        LOGGER.info("AUTHORIZING TRANSACTION");
 
         try {
             ResponseEntity<Authorization> response = restTemplate.getForEntity(
@@ -36,7 +36,7 @@ public class AuthorizerService {
                 throw new unauthorizedException("Unauthorized transaction");
             }
 
-            LOGGER.info("TRANSACTION AUTHORIZED {}", transaction);
+            LOGGER.info("TRANSACTION AUTHORIZED");
 
         } catch (HttpServerErrorException ex) {
             LOGGER.error("HttpServerErrorException: {}", ex.getMessage());

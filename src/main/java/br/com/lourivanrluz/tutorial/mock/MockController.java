@@ -20,7 +20,7 @@ public class MockController {
         // Gerar um número aleatório entre 1 e 10 (inclusive)
         int randomNumber = random.nextInt(10) + 1;
         try {
-            Thread.sleep(Duration.ofSeconds(randomNumber));
+            Thread.sleep(randomNumber * 1000L);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -36,7 +36,7 @@ public class MockController {
         // Gerar um número aleatório entre 1 e 10 (inclusive)
         int randomNumber = random.nextInt(10) + 1;
         try {
-            Thread.sleep(Duration.ofSeconds(randomNumber));
+            Thread.sleep(randomNumber * 1000L);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

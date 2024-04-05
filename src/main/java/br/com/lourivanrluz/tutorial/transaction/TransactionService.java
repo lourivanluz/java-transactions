@@ -20,6 +20,7 @@ import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExe
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
 import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import br.com.lourivanrluz.tutorial.wallet.WalletType;
+import jakarta.transaction.InvalidTransactionException;
 
 @Service
 @PropertySource("classpath:application.properties")
@@ -50,96 +51,95 @@ public class TransactionService {
     }
 
     @Transactional
-    public Transaction createTransaction(Transaction transaction) {
-        LOGGER.info("-TRANSACTION-{}", transaction);
+    public Transaction createTransaction(Transaction transaction, Boolean creatScheduleTransaction) {
+
+        LOGGER.info("-TRANSACTION-{}", transaction.getTypeTransaction().equals(1) ? "FULL" : "INSTALLMENTS");
         // validar
-        validate(transaction);
+        validateTransaction(transaction);
 
-        LOGGER.info("-TRANSACTION-POS-SAVE {}", transaction);
         // debitar e creditar nas wallwts
-        Wallet walletPayer = walletRepository.findById(transaction.getPayer()).get();
-        Wallet saved = walletRepository.save(walletPayer.subBalance(transaction.getAmount()));
-        Wallet walletPayee = walletRepository.findById(transaction.getPayee()).get();
-        walletRepository.save(walletPayee.addBalance(transaction.getAmount()));
+        Wallet walletPayer = transaction.getPayer();
+        Wallet walletPayee = transaction.getPayee();
 
-        if (transaction instanceof TransactionFuture) {
-            LOGGER.info("-TRANSACTIONFUTURE-", transaction.toString());
+        walletPayer.subBalance(transaction.getAmount());
+        // Wallet savedPayer = walletRepository.save(walletPayer);
+
+        walletPayee.addBalance(transaction.getAmount());
+        walletRepository.save(walletPayee);
+
+        Transaction transactionSaved = transactionsRepository.save(transaction);
+
+        if (creatScheduleTransaction
+                && transaction.getTypeTransaction().equals(TransactionType.PaymentinInstallments.getValue())) {
+
+            TransactionFuture transactionFuture = new TransactionFuture();
+
             BigDecimal totalAmount = transaction.getAmount()
                     .multiply(BigDecimal.valueOf(transaction.getInstallments()));
-            walletRepository.save(saved.subCredit(totalAmount));
 
-            LOGGER.info("-TRANSACTIONFUTURE-POS-SAVE-{}", transaction);
+            walletPayer.subCredit(totalAmount);
+
+            walletRepository.save(walletPayer);
+
+            List<Transaction> transactionsList = transactionFuture.getTransactions();
+            transactionsList.add(transactionSaved);
+            transactionFuture.setTransactions(transactionsList);
+
+            transactionFuture.setTotalAmount(totalAmount);
+            transactionFuture.setIsActive(true);
+            transactionFuture.setNumberOfInstallments(transactionSaved.getInstallments() - 1);
+            transactionFuture.setNextPayment(getPaymentDeadLineProp(env));
+
+            transactionsFutureRepository.save(transactionFuture);
+
         }
-        authorizerService.authorize(transaction);
+        TransactionDto transactionDto = TransactionDto.convertTransactionToDto(transactionSaved);
+
+        authorizerService.authorize(transactionSaved);
 
         if (env.getProperty("SEND_EMAIL").equals("true")) {
             LOGGER.info("-TRANSACTION-ENVIARA-EMAIL}");
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String message = """
-                    Mr. %s,
-                    your purchase made on the
-                    %s for the amount of $%.2f cash
-                    has been successfully approved.
-                    """.formatted(walletPayer.fullName(), LocalDateTime.now().format(formatter).toString(),
-                    transaction.getAmount());
-
-            Email mensagem = new Email(walletPayer.email(), "transaction accept", message);
+            Email mensagem = new Email(transactionSaved);
             notificationService.notify(mensagem.toString());
         } else {
-            notificationService.notify(transaction.toString());
+            notificationService.notify(transactionDto.toString());
         }
 
-        if (transaction instanceof TransactionFuture) {
-            TransactionFuture transactionfuture = (TransactionFuture) transaction;
-            Transaction result = transactionsRepository.save(transactionfuture.convertToTransaction());
-            transactionfuture.setNextPayment(getPaymentDeadLineProp(env));
-            transactionfuture.setInstallments(transactionfuture.getInstallments() - 1);
-            transactionsFutureRepository.save(transactionfuture);
-
-            return result;
-        }
-        return transactionsRepository.save(transaction);
+        return transactionSaved;
     }
 
-    private void validate(Transaction transaction) {
-        walletRepository.findById(transaction.getPayee())
-                .map(payee -> walletRepository.findById(transaction.getPayer())
-                        .map(payer -> isTransactionValided(transaction, payer) ? transaction : null)
-                        .orElseThrow(() -> new InvalideTransactionExeption(
-                                "Invalid transaction - %s".formatted(transaction))))
-                .orElseThrow(() -> new InvalideTransactionExeption("Invalid transaction - %s".formatted(transaction)));
-    }
+    private void validateTransaction(Transaction transaction) {
 
-    private boolean isTransactionValided(Transaction transaction, Wallet payer) {
-        Boolean validedCommum = !payer.blocked() && payer.type() == WalletType.COMUM.getValue() &&
-                payer.balance().compareTo(transaction.getAmount()) >= 0 &&
-                !payer.id().equals(transaction.getPayee());
-
-        if (transaction instanceof TransactionFuture) {
-            TransactionFuture transactionFuture = (TransactionFuture) transaction;
-            Boolean haveCredit = payer.credit().compareTo(transactionFuture.getTotalAmount()) >= 0;
-            return haveCredit && validedCommum;
+        if (!isCommonValid(transaction)) {
+            throw new InvalideTransactionExeption("Invalid transaction");
         }
 
-        return validedCommum;
+        if (transaction.getTypeTransaction().equals(TransactionType.PaymentinInstallments.getValue())) {
+            if (!isFutureTransactionValid(transaction)) {
+                throw new InvalideTransactionExeption("Invalid transaction");
+            }
+        }
     }
 
-    public Transaction createFullTransaction(Transaction transaction) {
-        return createTransaction(transaction);
+    private boolean isCommonValid(Transaction transaction) {
+        Wallet payer = transaction.getPayer();
+        BigDecimal amount = transaction.getAmount();
+
+        return !payer.getIsBlocked() &&
+                payer.getType() == WalletType.COMUM.getValue() &&
+                payer.getBalance().compareTo(amount) >= 0 &&
+                !payer.getId().equals(transaction.getPayee().getId());
     }
 
-    public Transaction createInstallmentTransaction(Transaction transaction) {
-
-        BigDecimal totalAmount = transaction.getAmount()
-                .multiply(BigDecimal.valueOf(transaction.getInstallments()));
-        TransactionFuture newtransaction = transaction.convertToTransactionFuture();
-        newtransaction.setTotalAmount(totalAmount);
-        newtransaction.setIsActive(true);
-        return createTransaction(newtransaction);
-
+    private boolean isFutureTransactionValid(Transaction transaction) {
+        Wallet payer = transaction.getPayer();
+        BigDecimal amount = transaction.getAmount();
+        int installments = transaction.getInstallments();
+        BigDecimal totalAmount = amount.multiply(BigDecimal.valueOf(installments));
+        return payer.getCredit().compareTo(totalAmount) >= 0;
     }
 
-    private static LocalDateTime getPaymentDeadLineProp(Environment env) {
+    public static LocalDateTime getPaymentDeadLineProp(Environment env) {
         Integer month = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_MONTHS"));
         Integer days = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_DAYS"));
         Integer hours = Integer.valueOf(env.getProperty("PAYMENT_DEADLINE_IN_HOURS"));

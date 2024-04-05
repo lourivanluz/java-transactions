@@ -2,7 +2,7 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExeption;
+import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +13,8 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 // import org.springframework.http.ResponseEntity;
 // import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,39 +23,23 @@ import org.springframework.web.bind.annotation.GetMapping;
 @RequestMapping("transaction")
 public class TransationController {
     private final TransactionService transactionService;
+    private final WalletRepository walletRepository;
+
     private final Logger LOGGER = LoggerFactory.getLogger(TransationController.class);
 
-    public TransationController(TransactionService transactionService) {
+    public TransationController(TransactionService transactionService, WalletRepository walletRepository) {
         this.transactionService = transactionService;
-
+        this.walletRepository = walletRepository;
     }
 
     @PostMapping()
-    public Transaction transaction(@RequestBody @Valid Transaction transaction) {
-        if (transaction.getTypeTransaction() == TransactionType.PaymentinFull.getValue()
-                && transaction.getInstallments() == 0) {
-            try {
-                LOGGER.info("PAGAMENTO A VISTA {}", transaction);
-                return transactionService.createFullTransaction(transaction);
+    public ResponseEntity transaction(@RequestBody @Valid TransactionDto transactionDto) {
 
-            } catch (Exception e) {
-                throw new InvalideTransactionExeption(e.getMessage());
-            }
-
-        } else if (transaction.getTypeTransaction() == TransactionType.PaymentinInstallments.getValue()
-                && transaction.getInstallments() >= 2) {
-            try {
-                LOGGER.info("PAGAMENTO PARCELADO {}", transaction);
-                return transactionService.createInstallmentTransaction(transaction);
-
-            } catch (Exception e) {
-                throw new InvalideTransactionExeption(e.getMessage());
-            }
-
-        } else {
-            throw new InvalideTransactionExeption("Invalid fields for transaction");
-        }
-
+        Transaction transaction = transactionDto.convertToTransaction(transactionDto, walletRepository);
+        LOGGER.info("transaction foi transformada", transaction);
+        TransactionDto response = TransactionDto
+                .convertTransactionToDto(transactionService.createTransaction(transaction, true));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping

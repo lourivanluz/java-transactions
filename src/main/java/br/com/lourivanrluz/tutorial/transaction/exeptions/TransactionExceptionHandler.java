@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class TransactionExceptionHandler {
     @ExceptionHandler(InvalideTransactionExeption.class)
     public ResponseEntity<Object> handle(InvalideTransactionExeption e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new ExeptionsDto(e.getMessage()));
     }
 }

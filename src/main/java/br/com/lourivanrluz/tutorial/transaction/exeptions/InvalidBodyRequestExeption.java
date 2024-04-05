@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class InvalidBodyRequestExeption extends RuntimeException {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handle(MethodArgumentNotValidException e) {
-        return ResponseEntity.badRequest().body(e.getAllErrors().get(0).getDefaultMessage());
+        return ResponseEntity.badRequest().body(new ExeptionsDto(e.getAllErrors().get(0).getDefaultMessage()));
     }
 }
