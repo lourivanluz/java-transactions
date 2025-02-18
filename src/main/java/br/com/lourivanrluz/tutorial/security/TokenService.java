@@ -1,9 +1,6 @@
 package br.com.lourivanrluz.tutorial.security;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +20,6 @@ public class TokenService {
 
     @Autowired
     private Environment env;
-
-    private Logger log = LoggerFactory.getLogger(TokenService.class);
 
     public String generateToken(Users user) {
         String security = env.getProperty("SECRET.GENERETETOKEN.SALT");

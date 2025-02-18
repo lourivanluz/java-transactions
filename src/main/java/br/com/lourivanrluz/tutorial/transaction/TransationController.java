@@ -2,7 +2,6 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +28,7 @@ public class TransationController {
     }
 
     @PostMapping
-    public ResponseEntity transaction(@RequestBody @Valid TransactionDto transactionDto) {
+    public ResponseEntity<TransactionDto> transaction(@RequestBody @Valid TransactionDto transactionDto) {
 
         Transaction transaction = transactionDto.convertToTransaction(transactionDto);
         LOGGER.info("transaction foi transformada {}", transaction);

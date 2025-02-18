@@ -39,11 +39,11 @@ public class NotificationConsumer {
             ResponseEntity<Notification> response = restTemplate.getForEntity(
             API_URL_UNSTABLE + "/notification",
             Notification.class);
-            if (response.getStatusCode().isError() || !response.getBody().message()) {
+            Notification notification = response.getBody();
+            if (notification == null || response.getStatusCode().isError() || !notification.message()) {
             throw new NotificationException("Error seding notification");
             }
-
-            if (env.getProperty("SEND_EMAIL").equals("true")) {
+            if ("true".equals(env.getProperty("SEND_EMAIL"))) {
                 try {
                     emailservice.sendEmail(new Email(mensagem));
                 } catch (Exception e) {

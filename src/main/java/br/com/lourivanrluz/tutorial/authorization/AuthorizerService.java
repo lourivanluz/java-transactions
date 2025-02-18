@@ -37,8 +37,8 @@ public class AuthorizerService {
             ResponseEntity<Authorization> response = restTemplate.getForEntity(
             API_URL_UNSTABLE + "/authorization",
             Authorization.class);
-
-            if (response.getStatusCode().isError() || !response.getBody().isAuthorized()) {
+            Authorization authorization = response.getBody();
+            if (authorization == null || response.getStatusCode().isError() || !authorization.isAuthorized()) {
             throw new unauthorizedException("Unauthorized transaction");
             }
 

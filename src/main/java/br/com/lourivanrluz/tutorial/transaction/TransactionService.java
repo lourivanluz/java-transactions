@@ -105,7 +105,8 @@ public class TransactionService {
 
         authorizerService.authorize(transactionSaved);
 
-        if (env.getProperty("SEND_EMAIL").equals("true")) {
+
+        if ("true".equals(env.getProperty("SEND_EMAIL"))) {
             LOGGER.info("-TRANSACTION-ENVIARA-EMAIL}");
             Email mensagem = new Email(transactionSaved);
             notificationService.notify(mensagem.toString());
