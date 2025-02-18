@@ -1,7 +1,7 @@
 package br.com.lourivanrluz.tutorial.users;
 
 public enum UserRoleType {
-    ADM("admin"), COMMUM("commum");
+    ADM("admim"), COMMUM("commum");
 
     private String value;
 

@@ -1,9 +1,9 @@
 spring.application.name=tutorial
 
 # configuração do teu banco posgresql e deve ser compativel com o docker-compose
-spring.datasource.url=jdbc:postgresql://ep-patient-frost-a2a0kpmc.eu-central-1.pg.koyeb.app/koyebdb
-spring.datasource.username=koyeb-adm
-spring.datasource.password=npg_Tmu4W7lHFyVp
+spring.datasource.url=
+spring.datasource.username=
+spring.datasource.password=
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.show-sql=true
@@ -24,8 +24,8 @@ SEND_EMAIL=true
 
 spring.mail.host=sandbox.smtp.mailtrap.io
 spring.mail.port=587
-spring.mail.username=7c48ec0263677c
-spring.mail.password=742b27adc68f6b
+spring.mail.username=
+spring.mail.password=
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
@@ -38,7 +38,7 @@ spring.flyway.baseline-on-migrate=true
 spring.flyway.locations=classpath:db/migration
 
 #secret para uso no authtoken jwt
-SECRET.GENERETETOKEN.SALT=${JWT_SALT:minhasenhasecreta}
+SECRET.GENERETETOKEN.SALT=
 
 #API simulando serviço instavel 
 API_UNSTABLE=http://hilarious-aime-luz-11862766.koyeb.app

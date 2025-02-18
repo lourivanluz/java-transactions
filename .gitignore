@@ -34,3 +34,4 @@ build/
 
 db/postgres-data
 service/
+src/main/resources/application.properties

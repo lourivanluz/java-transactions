@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
@@ -21,7 +22,8 @@ public class UserService {
     }
 
     public Users createUser(UserDto userDto) {
-        Users user = userDto.dtoToUser(userDto);
+        Users user = UserDto.dtoToUser(userDto);
+        user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
         Wallet wallet = new Wallet(null, user.getType(), BigDecimal.valueOf(0), BigDecimal.valueOf(0), false,
                 user);
         walletRepository.save(wallet);

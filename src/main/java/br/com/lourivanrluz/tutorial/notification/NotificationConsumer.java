@@ -35,21 +35,20 @@ public class NotificationConsumer {
     public void resiveNotification(String mensagem) {
         LOGGER.info("Notifying transaction {}...", mensagem);
         try {
+            String API_URL_UNSTABLE = env.getProperty("API_UNSTABLE");
             ResponseEntity<Notification> response = restTemplate.getForEntity(
-                    "http://localhost:8080/mock/notification",
-                    Notification.class);
+            API_URL_UNSTABLE + "/notification",
+            Notification.class);
             if (response.getStatusCode().isError() || !response.getBody().message()) {
-                throw new NotificationException("Error seding notification");
+            throw new NotificationException("Error seding notification");
             }
 
             if (env.getProperty("SEND_EMAIL").equals("true")) {
-                LOGGER.info("Notifying transaction {}...", mensagem);
                 try {
                     emailservice.sendEmail(new Email(mensagem));
                 } catch (Exception e) {
                     LOGGER.info("error send email {}", e.getMessage());
                 }
-
             }
 
             LOGGER.info("nofication has been sent {}", "OK");

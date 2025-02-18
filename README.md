@@ -15,10 +15,11 @@ Este projeto implementa uma API REST para realizar transações financeiras, ofe
 Para configurar este projeto, você precisará seguir os seguintes passos:
 
 1. Fork do projeto.
-2. Leia e configure suas variaveis de ambiente no diretorio "src/resources".
+2. Leia e configure suas variaveis de ambiente no diretorio "src/resources/application.properties".
 3. Instalar o docker e o Docker-compose.
-4. Na raiz do projeto Execute o docker-compose up --build
-5. faça um café;
+4. Na raiz do projeto Execute o "docker-compose up --build".
+6. Em um outro terminal execute o comando "./mvnw spring-boot:run".
+5. faça um café
 
 ## Regra de negocio
 

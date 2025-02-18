@@ -1,15 +1,19 @@
 package br.com.lourivanrluz.tutorial.transaction;
 
 public enum TransactionType {
-    PaymentinFull(1), PaymentinInstallments(2);
+    PaymentinFull(0), PaymentinInstallments(1);
 
-    private int value;
+    private final Integer value;
 
-    private TransactionType(int value) {
+    TransactionType(Integer value) {
         this.value = value;
     }
 
-    public int getValue() {
-        return value;
+    public Integer getValue() {
+        return this.value;
+    }
+
+    public String getType() {
+        return value == 0 ? "PaymentinFull" : "PaymentinInstallments";
     }
 }

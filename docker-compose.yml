@@ -14,28 +14,15 @@ services:
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
 
-  local-postgres-compose:
-    image: postgres:latest
+  tutorial:
+    build:
+      context: ./
+      dockerfile: Dockerfile
     ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_PASSWORD: "123"
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./db/postgres-data:/var/lib/postgresql/data
-    # networks:
-    #   - postgres-compose-network
+      - "8080:8080"
+    depends_on:
+      - kafka
 
-  # tutorial:
-  #   build:
-  #     context: ./
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - local-postgres-compose
-  #     - kafka
-
-# networks:
-#   postgres-compose-network:
-#     driver: bridge
+networks:
+  postgres-compose-network:
+    driver: bridge

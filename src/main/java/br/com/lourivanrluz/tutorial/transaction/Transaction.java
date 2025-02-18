@@ -4,20 +4,19 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import org.hibernate.annotations.ManyToAny;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -42,6 +41,7 @@ public class Transaction {
 
     private BigDecimal amount;
 
+    @Enumerated(EnumType.ORDINAL)
     private TransactionType typeTransaction;
 
     private Integer installments;
@@ -50,7 +50,7 @@ public class Transaction {
     LocalDateTime createdAt;
 
     @ManyToOne
-    @JoinColumn(name = "transaction_future", referencedColumnName = "id")
+    @JoinColumn(name = "transaction_future_id", referencedColumnName = "id")
     private TransactionFuture transactionFuture;
 
     public Transaction(UUID id, Wallet payer, Wallet payee, BigDecimal amount, TransactionType typeTransaction,

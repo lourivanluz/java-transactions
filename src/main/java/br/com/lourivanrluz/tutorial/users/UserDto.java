@@ -16,7 +16,7 @@ public class UserDto extends UserDtoResponse {
         this.password = password;
     }
 
-    public Users dtoToUser(UserDto userDto) {
+    public static Users dtoToUser(UserDto userDto) {
         return new Users(null, userDto.getFullName(), userDto.getPassword(), userDto.getCpf(), userDto.getEmail(),
                 userDto.getType(), UserRoleType.COMMUM, null);
     }

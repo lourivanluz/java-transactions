@@ -60,7 +60,7 @@ public class Users implements UserDetails {
 
     @Override
     public String getPassword() {
-        return password;
+        return this.password;
         // TODO Auto-generated method stub
         // throw new UnsupportedOperationException("Unimplemented method
         // 'getPassword'");
@@ -68,7 +68,7 @@ public class Users implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return this.email;
         // TODO Auto-generated method stub
         // throw new UnsupportedOperationException("Unimplemented method
         // 'getUsername'");
@@ -103,5 +103,10 @@ public class Users implements UserDetails {
         return true;
         // TODO Auto-generated method stub
         // throw new UnsupportedOperationException("Unimplemented method 'isEnabled'");
+    }
+
+    public static UserDto userToDto(Users user) {
+        return new UserDto(null, user.getFullName(), user.getCpf(), user.getEmail(), user.getType(),
+                user.getPassword());
     }
 }

@@ -2,6 +2,7 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,8 +15,6 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-// @EqualsAndHashCode(callSuper = false)
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -37,27 +36,6 @@ public class TransactionFuture {
     private LocalDateTime nextPayment;
 
     @OneToMany(mappedBy = "transactionFuture")
-    private List<Transaction> transactions;
 
-    // @OneToMany
-    // @JoinColumn(name = "transaction_id", referencedColumnName = "id")
-    // private Transaction transaction;
-
-    // public TransactionFuture(Transaction transaction) {
-    // this.transaction = transaction;
-    // }
-    // public TransactionFuture(Long id, Long payer, Long payee, BigDecimal amount,
-    // Integer typeTransaction,
-    // Integer installments, LocalDateTime createdAt, BigDecimal totalAmount,
-    // Boolean isActive,
-    // LocalDateTime nextPayment) {
-    // super(id, payer, payee, amount, typeTransaction, installments, createdAt);
-
-    // this.totalAmount=totalAmount;this.isActive=isActive;this.nextPayment=nextPayment;
+    private List<Transaction> transactions = new ArrayList<>();
 }
-
-// public Transaction convertToTransaction() {
-// return new Transaction(null, getPayer(), getPayee(), getAmount(),
-// getTypeTransaction(), getInstallments(),
-// null);
-// }

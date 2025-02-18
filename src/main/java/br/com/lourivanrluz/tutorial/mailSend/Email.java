@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import br.com.lourivanrluz.tutorial.transaction.Transaction;
-import br.com.lourivanrluz.tutorial.transaction.TransactionDto;
-import br.com.lourivanrluz.tutorial.wallet.Wallet;
 
 public class Email {
     private String to;

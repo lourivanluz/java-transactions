@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
+import br.com.lourivanrluz.tutorial.wallet.Wallet;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +21,7 @@ public class TransactionDto {
     @NotNull(message = "Field amount is requered")
     BigDecimal amount;
     @NotNull(message = "Field typeTransaction is requered")
-    TransactionType typeTransaction;
+    String typeTransaction;
     @NotNull(message = "Field installments is requered")
     Integer installments;
 
@@ -31,7 +31,7 @@ public class TransactionDto {
             UUID payer,
             UUID payee,
             BigDecimal amount,
-            TransactionType typeTransaction,
+            String typeTransaction,
             Integer installments, LocalDateTime createdAt) {
         this.id = id;
         this.payer = payer;
@@ -42,18 +42,23 @@ public class TransactionDto {
         this.createdAt = createdAt;
     }
 
-    public Transaction convertToTransaction(TransactionDto transactiondto, WalletRepository walletRepository) {
-        return new Transaction(transactiondto.getId(), walletRepository.findById(this.payer).get(),
-                walletRepository.findById(this.payee).get(),
-                transactiondto.getAmount(), transactiondto.getTypeTransaction(),
+    public Transaction convertToTransaction(TransactionDto transactiondto) {
+
+        TransactionType type = Integer.valueOf(transactiondto.getTypeTransaction()) == 0 ? TransactionType.PaymentinFull
+                : TransactionType.PaymentinInstallments;
+
+        return new Transaction(transactiondto.getId(), new Wallet(transactiondto.getPayer()),
+                new Wallet(transactiondto.getPayee()),
+                transactiondto.getAmount(), type,
                 transactiondto.getInstallments(),
                 transactiondto.getCreatedAt());
     }
 
     public static TransactionDto convertTransactionToDto(Transaction transaction) {
+        String type = transaction.getTypeTransaction().getType();
         return new TransactionDto(transaction.getId(), transaction.getPayer().getId(),
                 transaction.getPayee().getId(),
-                transaction.getAmount(), transaction.getTypeTransaction(),
+                transaction.getAmount(), type,
                 transaction.getInstallments(),
                 transaction.getCreatedAt());
     }

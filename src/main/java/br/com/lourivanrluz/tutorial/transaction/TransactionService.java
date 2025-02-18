@@ -2,7 +2,6 @@ package br.com.lourivanrluz.tutorial.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -20,7 +19,6 @@ import br.com.lourivanrluz.tutorial.transaction.exeptions.InvalideTransactionExe
 import br.com.lourivanrluz.tutorial.wallet.Wallet;
 import br.com.lourivanrluz.tutorial.wallet.WalletRepository;
 import br.com.lourivanrluz.tutorial.wallet.WalletType;
-import jakarta.transaction.InvalidTransactionException;
 
 @Service
 @PropertySource("classpath:application.properties")
@@ -50,27 +48,36 @@ public class TransactionService {
 
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalideTransactionExeption.class)
     public Transaction createTransaction(Transaction transaction, Boolean creatScheduleTransaction) {
 
-        LOGGER.info("-TRANSACTION-{}", transaction.getTypeTransaction().equals(1) ? "FULL" : "INSTALLMENTS");
-        // validar
-        validateTransaction(transaction);
+        LOGGER.info("-TRANSACTION-{}", transaction.getTypeTransaction().getValue() == 0 ? "FULL" : "INSTALLMENTS");
 
-        // debitar e creditar nas wallwts
+        transaction.setPayer(walletRepository.findById(transaction.getPayer().getId())
+        .orElseThrow(() -> new InvalideTransactionExeption("Invalid transaction")));
+
+        transaction.setPayee(walletRepository.findById(transaction.getPayee().getId())
+        .orElseThrow(() -> new InvalideTransactionExeption("Invalid transaction")));
+
+        validateTransaction(transaction,creatScheduleTransaction);
+
+        LOGGER.info("transaction valido");
+
         Wallet walletPayer = transaction.getPayer();
         Wallet walletPayee = transaction.getPayee();
 
         walletPayer.subBalance(transaction.getAmount());
-        // Wallet savedPayer = walletRepository.save(walletPayer);
-
         walletPayee.addBalance(transaction.getAmount());
+
         walletRepository.save(walletPayee);
+        LOGGER.info("salvou wallet");
 
         Transaction transactionSaved = transactionsRepository.save(transaction);
+        LOGGER.info("salvou transaction");
 
         if (creatScheduleTransaction
-                && transaction.getTypeTransaction().equals(TransactionType.PaymentinInstallments.getValue())) {
+                && transaction.getTypeTransaction().getValue()
+                        .equals(TransactionType.PaymentinInstallments.getValue())) {
 
             TransactionFuture transactionFuture = new TransactionFuture();
 
@@ -91,6 +98,7 @@ public class TransactionService {
             transactionFuture.setNextPayment(getPaymentDeadLineProp(env));
 
             transactionsFutureRepository.save(transactionFuture);
+            transaction.setTransactionFuture(transactionFuture);
 
         }
         TransactionDto transactionDto = TransactionDto.convertTransactionToDto(transactionSaved);
@@ -108,13 +116,18 @@ public class TransactionService {
         return transactionSaved;
     }
 
-    private void validateTransaction(Transaction transaction) {
+    private void validateTransaction(Transaction transaction, Boolean creatScheduleTransaction) {
+
+        LOGGER.info("ValidateTranaction chamou");
 
         if (!isCommonValid(transaction)) {
             throw new InvalideTransactionExeption("Invalid transaction");
         }
 
-        if (transaction.getTypeTransaction().equals(TransactionType.PaymentinInstallments.getValue())) {
+        Boolean isFutureTransaction = transaction.getTypeTransaction().getValue()
+                .equals(TransactionType.PaymentinInstallments.getValue());
+
+        if (isFutureTransaction && creatScheduleTransaction) {
             if (!isFutureTransactionValid(transaction)) {
                 throw new InvalideTransactionExeption("Invalid transaction");
             }
@@ -122,6 +135,7 @@ public class TransactionService {
     }
 
     private boolean isCommonValid(Transaction transaction) {
+
         Wallet payer = transaction.getPayer();
         BigDecimal amount = transaction.getAmount();
 
@@ -136,6 +150,8 @@ public class TransactionService {
         BigDecimal amount = transaction.getAmount();
         int installments = transaction.getInstallments();
         BigDecimal totalAmount = amount.multiply(BigDecimal.valueOf(installments));
+        LOGGER.info("*********credito = {} total = {}**********", payer.getCredit(), totalAmount);
+
         return payer.getCredit().compareTo(totalAmount) >= 0;
     }
 

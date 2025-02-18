@@ -15,8 +15,8 @@ public class EmailService {
     public void sendEmail(Email email) {
 
         var message = new SimpleMailMessage();
-        message.setTo("noreplay@email.com");
-        message.setFrom(email.getTo());
+        message.setTo(email.getTo());
+        message.setFrom("noreplay@email.com");
         message.setSubject(email.getSubject());
         message.setText(email.getBody());
 
