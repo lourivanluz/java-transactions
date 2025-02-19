@@ -2,12 +2,13 @@ package br.com.lourivanrluz.tutorial.users;
 
 import java.util.UUID;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
 public class UserDto extends UserDtoResponse {
-
+    @Schema(example = "passwordSeguro")
     @NotNull(message = "Field password is requered")
     String password;
 
