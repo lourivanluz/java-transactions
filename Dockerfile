@@ -12,6 +12,8 @@ WORKDIR /app
 # Copie o arquivo pom.xml e outros arquivos de configuração
 COPY pom.xml /app/pom.xml
 
+COPY init.sql /app/init.sql
+
 # Instale as dependências do Maven
 RUN mvn dependency:go-offline
 
